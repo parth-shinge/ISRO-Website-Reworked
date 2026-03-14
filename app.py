@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_mysqldb import MySQL
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
@@ -7,13 +7,13 @@ from jinja2 import TemplateNotFound
 import os
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+app.secret_key = os.getenv('SECRET_KEY', 'change-me-in-production')
 
 # MySQL Configuration
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = 'Ssm@12345'
-app.config['MYSQL_DB'] = 'isro_mission'
+app.config['MYSQL_HOST'] = os.getenv('MYSQL_HOST', 'localhost')
+app.config['MYSQL_USER'] = os.getenv('MYSQL_USER', 'root')
+app.config['MYSQL_PASSWORD'] = os.getenv('MYSQL_PASSWORD', '')
+app.config['MYSQL_DB'] = os.getenv('MYSQL_DB', 'isro_mission')
 
 mysql = MySQL(app)
 bcrypt = Bcrypt(app)
@@ -177,17 +177,13 @@ def change_password():
     return redirect(url_for('profile'))
 
 # Forgot Password Route
-@app.route('/forgot_password', methods=['POST'])
+@app.route('/forgot_password', methods=['GET', 'POST'])
 def forgot_password():
-    email = request.form['email']
-    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
-    cursor.execute('SELECT * FROM users WHERE email = %s', (email,))
-    user = cursor.fetchone()
-    if user:
-        # Send email with password reset link
-        flash('Password reset link sent to your email', 'success')
-    else:
-        flash('Email not found', 'danger')
+    if request.method == 'GET':
+        flash('Please contact admin to reset your password.', 'info')
+        return redirect(url_for('login'))
+
+    flash('Password reset is not configured yet. Please contact admin.', 'warning')
     return redirect(url_for('login'))
 
 # Help Route
@@ -196,8 +192,14 @@ def forgot_password():
 def help():
     return render_template('help.html')
 
+# Feedback Route
+@app.route('/submit_feedback', methods=['POST'])
+def submit_feedback():
+    flash('Thank you for your feedback!', 'success')
+    return redirect(url_for('render_template_route', template='valid'))
+
 # Logout Route
-@app.route('/logout', methods=['POST'])
+@app.route('/logout', methods=['GET', 'POST'])
 @login_required
 def logout():
     logout_user()
